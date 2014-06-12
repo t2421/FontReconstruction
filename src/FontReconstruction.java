@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.font.*;
 import java.awt.Graphics2D;
 import java.awt.geom.*;
@@ -18,6 +19,7 @@ import java.awt.image.BufferedImage;
 import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.List;
+import java.net.URLDecoder;
 
 import com.google.gson.*;
 import com.google.gson.annotations.*;
@@ -48,57 +50,29 @@ public class FontReconstruction extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		Gson gson = new Gson();
-				
-				//userList = new ArrayList<>();
-
-				List<FontData> fontDataList = new ArrayList<>();
-				
-				String outFont = "";
-				
-				
-				System.out.println("start");
-				if(request.getParameter("font") != null){
-					outFont = request.getParameter("font");
-				}else{
-					outFont = "a";
-				}
-				ArrayList path;
-				FontOutlineSystem fos;
-				fos = new FontOutlineSystem("ƒqƒ‰ƒMƒmŠpƒS", 100);
-				path = fos.convert(outFont, 0, 0);
-			
-				System.out.println(gson.toJson(path));
-				float x=0, y=0, ox=0, oy=0;
-				for(int i = 0; i<path.size();i++){
-					
-					FontPoint fp = (FontPoint)path.get(i);
-				    ox = x;
-				    oy = y;
-				    x = fp.x;
-				    y = fp.y;
-				    if (fp.mode==FontPoint.DRAW) {
-				    	//System.out.println(ox); 
-				    }else{
-				    	//System.out.println("MOVE");
-				    }
-				}
-				
-				try{
-					//FileWriter fw = new FileWriter("C:/Users/bfp_p008/Desktop/javaOut/font.json",false);
-					String callback = request.getParameter("callback");
-					
-					
-					//pw.close();
-					System.out.println("complete font json");
-					response.setContentType("application/json charaset=utf-8");
-					response.setHeader("Access-Control-Allow-Origin", "*");
-					
-					PrintWriter pw = response.getWriter();
-					pw.println(callback + "(" + gson.toJson(path) + ")");
-					//response.getWriter().write(gson.toJson(path).toString());
-				}catch(IOException ex){
-					ex.printStackTrace();
-				}
+		String outFont = "";
+		String fontName = "";
+		if(request.getParameter("font") != null){
+			outFont = URLDecoder.decode(request.getParameter("font"),"utf-8");
+		}else{
+			outFont = "a";
+		}
+		fontName = URLDecoder.decode(request.getParameter("fontName"),"utf-8");
+		System.out.println("š"+fontName);
+		ArrayList path;
+		FontOutlineSystem fos;
+		fos = new FontOutlineSystem(fontName, Integer.parseInt(request.getParameter("fontSize")));
+		path = fos.convert(outFont, 0, 0);
+		
+		try{
+			String callback = request.getParameter("callback");
+			response.setContentType("application/json charaset=utf-8");
+			response.setHeader("Access-Control-Allow-Origin", "*");
+			PrintWriter pw = response.getWriter();
+			pw.println(callback + "(" + gson.toJson(path) + ")");
+		}catch(IOException ex){
+			ex.printStackTrace();
+		}
 	}
 
 	/**
@@ -112,35 +86,13 @@ public class FontReconstruction extends HttpServlet {
 
 
 class FontPoint {
-	  static final int MOVE = PathIterator.SEG_MOVETO;
-	  static final int DRAW = PathIterator.SEG_LINETO;
-	  float x, y;
-	  int mode;
-	  String lineType;
-	  FontPoint() {
-	    this(0f,0f,MOVE,"");
-	  }
-	  FontPoint(float x, float y) {
-	    this(x,y,MOVE,"");
-	  }
-	  FontPoint(float x, float y, int mode, String lineType) {
-	    this.x = x;
-	    this.y = y;
-	    this.mode = mode;
-	    this.lineType = lineType;
-	  }
-	}
+  String lineType;
+  float [] points = new float[6];
 
-class FontData{
-	public String type;
-	public float x;
-	public float y;
-	
-	public FontData(String type, float x, float y){
-		this.type = type;
-		this.x = x;
-		this.y = y;
-	}
+  FontPoint(String lineType,float[] points) {
+    this.lineType = lineType;
+    this.points = points;
+  }
 }
 
 class FontOutlineSystem {
@@ -148,7 +100,6 @@ class FontOutlineSystem {
 	BufferedImage img;
 	Graphics2D g2d;
 	FontRenderContext frc;
-	FontData fontData;
 	
 	FontOutlineSystem(){
 		
@@ -158,12 +109,14 @@ class FontOutlineSystem {
 		img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
 		g2d = img.createGraphics();
 		
-		frc = g2d.getFontRenderContext();
+		
 		loadFont(fontName, fontSize);
 	}
 	
 	void loadFont(String name, int size){
+		
 		font = new Font(name,Font.PLAIN,size);
+		
 	}
 	
 	ArrayList convert(String text, float xo, float yo){
@@ -172,6 +125,8 @@ class FontOutlineSystem {
 		
 		float [] seg = new float[6];
 		float x=0, y=0, mx=0, my=0;
+		
+		frc = new FontRenderContext(new AffineTransform(),false,false);
 		GlyphVector gv = font.createGlyphVector(frc, text);
 		Shape glyph = gv.getOutline(xo, yo);
 		PathIterator pi = glyph.getPathIterator(null);
@@ -179,57 +134,47 @@ class FontOutlineSystem {
 		
 		
 		while(!pi.isDone()){
+			seg = new float[6];
 			int segtype = pi.currentSegment(seg);
 			int mode = 0;
 			switch(segtype){
 			
 			
 			case PathIterator.SEG_MOVETO:
-				//System.out.println("PathIterator.SEG_MOVETO");
-				x = mx = seg[0];
-				y = my = seg[1];
+
 				lineType = "MOVETO";
-				mode = FontPoint.MOVE;
 				break;
 				
 			case PathIterator.SEG_LINETO:
-				//System.out.println("PathIterator.SEG_LINETO");
-				x = seg[0];
-				y = seg[1];
+
 				lineType = "LINETO";
-				mode = FontPoint.DRAW;
+				
 				break;
 				
 			case PathIterator.SEG_QUADTO:
-				//System.out.println("PathIterator.SEG_QUADTO"); 
-				x = seg[0];
-				y = seg[1];
 				lineType = "QUADTO";
-				mode = FontPoint.DRAW;
+				
 				break;
 				
 			case PathIterator.SEG_CUBICTO:
-				//System.out.println("PathIterator.SEG_CUBICTO"); 
-				x = seg[0];
-				y = seg[1];
 				lineType = "CUBICTO";
-				mode = FontPoint.DRAW;
+				
 				break;
 				
 			case PathIterator.SEG_CLOSE:
 				lineType = "CLOSETO";
-				//System.out.println("PathIterator.SEG_CLOSE");
-				x = mx;
-				y = my;
-				mode = FontPoint.DRAW;
+				
 				break;
-				
-				
-			}
 			
-			al.add(new FontPoint(x,y,mode,lineType));
+			}
+			al.add(new FontPoint(lineType,seg.clone()));
 			pi.next();
 		}
+		Font [] fonts=GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+		for(int i = 0;i<fonts.length;i++){
+			System.out.println(fonts[i]);
+		}
+
 		
 		return al;
 	}
