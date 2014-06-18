@@ -2,16 +2,17 @@ var fontJSON;
 var canvas;
 var processingInstance;
 $(document).ready(function() {
-	var getString = "Typograpohy";
-	var fontName = "Times New Roman";
+	var getString = "動くもじ";
+	var fontName = "HiraMinPro-W3";
 	$.ajax({
-		url: 'http://localhost:8010/FontReconstruction/FontReconstruction',
+		url: 'http://localhost:8080/FontReconstruction2/FontReconstruction',
 		type: 'GET',
 		dataType: 'jsonp',
-		data: {font: encodeURI(getString),fontSize:200,fontName:encodeURI(fontName)}
+		data: {font: encodeURI(getString),dataType:"1",fontSize:300,fontName:encodeURI(fontName)}
 	})
 	.done(function(data) {
 		fontJSON = data;
+		console.log(data);
 		init();
 	})
 	.fail(function() {
@@ -67,6 +68,10 @@ function drawFont(processing){
 			if(pointInfo.lineType == "QUADTO"){
 				endPoint = {x:points[2]+p.random(-randomSeed,randomSeed),y:points[3]+p.random(-randomSeed,randomSeed)}
 				p.bezier(startPoint.x,startPoint.y,points[0]+p.random(-randomSeed,randomSeed),points[1]+p.random(-randomSeed,randomSeed),points[0]+p.random(-randomSeed,randomSeed),points[1]+p.random(-randomSeed,randomSeed),endPoint.x,endPoint.y);
+				startPoint = {x:endPoint.x,y:endPoint.y};
+			}else if(pointInfo.lineType == "CUBICTO"){
+				endPoint = {x:points[4]+p.random(-randomSeed,randomSeed),y:points[5]+p.random(-randomSeed,randomSeed)}
+				p.bezier(startPoint.x,startPoint.y,points[0]+p.random(-randomSeed,randomSeed),points[1]+p.random(-randomSeed,randomSeed),points[2]+p.random(-randomSeed,randomSeed),points[3]+p.random(-randomSeed,randomSeed),endPoint.x,endPoint.y);
 				startPoint = {x:endPoint.x,y:endPoint.y};
 			}else if(pointInfo.lineType == "LINETO"){
 				endPoint = {x:points[0]+p.random(-randomSeed,randomSeed),y:points[1]+p.random(-randomSeed,randomSeed)}

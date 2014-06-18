@@ -52,16 +52,24 @@ public class FontReconstruction extends HttpServlet {
 		Gson gson = new Gson();
 		String outFont = "";
 		String fontName = "";
+		int dataType = 0;
+		int fontSize = 0;
+		request.setCharacterEncoding("utf-8");
 		if(request.getParameter("font") != null){
 			outFont = URLDecoder.decode(request.getParameter("font"),"utf-8");
+			dataType = Integer.parseInt(request.getParameter("dataType"));
+			fontName = URLDecoder.decode(request.getParameter("fontName"),"utf-8");
+			fontSize = Integer.parseInt(request.getParameter("fontSize"));
 		}else{
 			outFont = "a";
+			fontName = "Serif";
+			fontSize = 30;
 		}
-		fontName = URLDecoder.decode(request.getParameter("fontName"),"utf-8");
-		System.out.println("Åö"+fontName);
+		
+		
 		ArrayList path;
 		FontOutlineSystem fos;
-		fos = new FontOutlineSystem(fontName, Integer.parseInt(request.getParameter("fontSize")));
+		fos = new FontOutlineSystem(fontName, fontSize);
 		path = fos.convert(outFont, 0, 0);
 		
 		try{
@@ -69,7 +77,13 @@ public class FontReconstruction extends HttpServlet {
 			response.setContentType("application/json charaset=utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");
 			PrintWriter pw = response.getWriter();
-			pw.println(callback + "(" + gson.toJson(path) + ")");
+			System.out.println(dataType);
+			if(dataType==1){
+				pw.println(callback + "(" + gson.toJson(path) + ")");
+			}else{
+				pw.println(gson.toJson(path));
+			}
+			
 		}catch(IOException ex){
 			ex.printStackTrace();
 		}
@@ -116,11 +130,20 @@ class FontOutlineSystem {
 	void loadFont(String name, int size){
 		
 		font = new Font(name,Font.PLAIN,size);
+		Font [] fonts=GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+		for(int i = 0;i<fonts.length;i++){
+			System.out.println(fonts[i].getName());
+			if(fonts[i].getName().equals(name)){
+				font = fonts[i];
+				font = 	font.deriveFont(Font.PLAIN,size);
+			}
+		}
 		
+		//font = fonts[i]
 	}
 	
 	ArrayList convert(String text, float xo, float yo){
-		ArrayList al = new ArrayList<>();
+		ArrayList al = new ArrayList<FontPoint>();
 		if(font==null) return al;
 		
 		float [] seg = new float[6];
@@ -172,7 +195,7 @@ class FontOutlineSystem {
 		}
 		Font [] fonts=GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
 		for(int i = 0;i<fonts.length;i++){
-			System.out.println(fonts[i]);
+			//System.out.println(fonts[i]);
 		}
 
 		
